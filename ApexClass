@@ -1,0 +1,42 @@
+public class SlackSalesforceIntegration {
+    @HttpPost
+    global static String createOpportunity(RestRequest req, RestResponse res) {
+        try {
+            Map<String, Object> requestBody = (Map<String, Object>) JSON.deserializeUntyped(req.requestBody.toString());
+            String oppName = (String) requestBody.get('name');
+            String accountId = (String) requestBody.get('accountId');
+            Decimal amount = Decimal.valueOf((String) requestBody.get('amount'));
+            String stage = (String) requestBody.get('stage');
+            
+            Opportunity opp = new Opportunity(
+                Name = oppName,
+                AccountId = accountId,
+                Amount = amount,
+                StageName = stage,
+                CloseDate = Date.today().addDays(30)
+            );
+            insert opp;
+            
+            return JSON.serialize(new Map<String, String>{'status' => 'success', 'oppId' => opp.Id});
+        } catch (Exception e) {
+            return JSON.serialize(new Map<String, String>{'status' => 'error', 'message' => e.getMessage()});
+        }
+    }
+    
+    @HttpPatch
+    global static String updateOpportunityStage(RestRequest req, RestResponse res) {
+        try {
+            Map<String, Object> requestBody = (Map<String, Object>) JSON.deserializeUntyped(req.requestBody.toString());
+            String oppId = (String) requestBody.get('oppId');
+            String newStage = (String) requestBody.get('stage');
+            
+            Opportunity opp = [SELECT Id, StageName FROM Opportunity WHERE Id = :oppId LIMIT 1];
+            opp.StageName = newStage;
+            update opp;
+            
+            return JSON.serialize(new Map<String, String>{'status' => 'success', 'oppId' => opp.Id});
+        } catch (Exception e) {
+            return JSON.serialize(new Map<String, String>{'status' => 'error', 'message' => e.getMessage()});
+        }
+    }
+}
